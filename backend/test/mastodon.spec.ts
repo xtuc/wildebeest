@@ -1,4 +1,5 @@
 import { strict as assert } from 'node:assert/strict'
+import type { Env } from 'wildebeest/backend/src/types/env'
 import * as v1_instance from 'wildebeest/functions/api/v1/instance'
 import * as v2_instance from 'wildebeest/functions/api/v2/instance'
 import * as apps from 'wildebeest/functions/api/v1/apps'
@@ -18,15 +19,14 @@ describe('Mastodon APIs', () => {
 	describe('instance', () => {
 		test('return the instance infos v1', async () => {
 			const db = await makeDB()
-			const data = {
-				title: 'title',
-				uri: 'uri',
-				email: 'email',
-				description: 'description',
-			}
-			await configure(db, data)
 
-			const res = await v1_instance.handleRequest(domain, db)
+			const env = {
+				INSTANCE_TITLE: 'a',
+				ADMIN_EMAIL: 'b',
+				INSTANCE_DESCR: 'c',
+			} as Env
+
+			const res = await v1_instance.handleRequest(domain, db, env)
 			assert.equal(res.status, 200)
 			assertCORS(res)
 			assertJSON(res)
@@ -35,42 +35,49 @@ describe('Mastodon APIs', () => {
 				const data = await res.json<any>()
 				assert.equal(data.rules.length, 0)
 				assert.equal(data.uri, domain)
+				assert.equal(data.title, 'a')
+				assert.equal(data.email, 'b')
+				assert.equal(data.description, 'c')
 			}
 		})
 
 		test('adds a short_description if missing v1', async () => {
 			const db = await makeDB()
-			const data = {
-				title: 'title',
-				uri: 'uri',
-				email: 'email',
-				description: 'description',
-			}
-			await configure(db, data)
 
-			const res = await v1_instance.handleRequest(domain, db)
+			const env = {
+				INSTANCE_DESCR: 'c',
+			} as Env
+
+			const res = await v1_instance.handleRequest(domain, db, env)
 			assert.equal(res.status, 200)
 
 			{
 				const data = await res.json<any>()
-				assert.equal(data.short_description, 'description')
+				assert.equal(data.short_description, 'c')
 			}
 		})
 
 		test('return the instance infos v2', async () => {
 			const db = await makeDB()
-			const data = {
-				title: 'title',
-				uri: 'uri',
-				email: 'email',
-				description: 'description',
-			}
-			await configure(db, data)
 
-			const res = await v2_instance.handleRequest(domain, db)
+			const env = {
+				INSTANCE_TITLE: 'a',
+				ADMIN_EMAIL: 'b',
+				INSTANCE_DESCR: 'c',
+			} as Env
+			const res = await v2_instance.handleRequest(domain, db, env)
 			assert.equal(res.status, 200)
 			assertCORS(res)
 			assertJSON(res)
+
+			{
+				const data = await res.json<any>()
+				assert.equal(data.rules.length, 0)
+				assert.equal(data.domain, domain)
+				assert.equal(data.title, 'a')
+				assert.equal(data.contact.email, 'b')
+				assert.equal(data.description, 'c')
+			}
 		})
 	})
 

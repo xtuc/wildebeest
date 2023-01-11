@@ -5,10 +5,10 @@ const INSTANCE_VERSION = '4.0.2'
 
 export const onRequest: PagesFunction<Env, any> = async ({ env, request }) => {
 	const domain = new URL(request.url).hostname
-	return handleRequest(domain, env.DATABASE)
+	return handleRequest(domain, env.DATABASE, env)
 }
 
-export async function handleRequest(domain: string, db: D1Database) {
+export async function handleRequest(domain: string, db: D1Database, env: Env) {
 	const headers = {
 		'Access-Control-Allow-Origin': '*',
 		'Access-Control-Allow-Headers': 'content-type, authorization',
@@ -16,7 +16,7 @@ export async function handleRequest(domain: string, db: D1Database) {
 	}
 
 	const query = `
-        SELECT * FROM instance_config WHERE key IN ('title', 'description', 'email', 'short_description', 'thumbnail')
+        SELECT * FROM instance_config WHERE key IN ('short_description', 'thumbnail')
     `
 	const { results, error, success } = await db.prepare(query).all()
 	if (!success) {
@@ -33,10 +33,10 @@ export async function handleRequest(domain: string, db: D1Database) {
 
 	const res: InstanceConfigV2 = {
 		domain,
-		title: config.title,
+		title: env.INSTANCE_TITLE,
 		version: INSTANCE_VERSION,
 		source_url: 'https://github.com/cloudflare/wildebeest',
-		description: config.description,
+		description: env.INSTANCE_DESCR,
 		thumbnail: {
 			url: config.thumbnail,
 		},
@@ -47,7 +47,7 @@ export async function handleRequest(domain: string, db: D1Database) {
 			enabled: false,
 		},
 		contact: {
-			email: config.email,
+			email: env.ADMIN_EMAIL,
 		},
 		rules: [],
 	}
